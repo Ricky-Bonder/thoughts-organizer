@@ -1,0 +1,118 @@
+.left-menu {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 260px;
+  background: #fff;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.left-menu--collapsed {
+  transform: translateX(-260px);
+}
+
+.left-menu__toggle {
+  position: fixed;
+  left: 8px;
+  top: 8px;
+  z-index: 101;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: left 0.3s ease;
+}
+
+.left-menu__toggle--open {
+  left: 268px;
+}
+
+.left-menu__section {
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.left-menu__section h4 {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  color: #888;
+  letter-spacing: 0.5px;
+}
+
+.left-menu__color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.left-menu__color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+.left-menu__color-swatch--selected {
+  border: 2px solid #333;
+}
+
+.left-menu__arrow-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.left-menu__arrow-option:hover {
+  background: #f0f0f0;
+}
+
+.left-menu__arrow-option--selected {
+  border-color: #2196F3;
+  background: #e3f2fd;
+}
+
+.left-menu__btn {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.left-menu__btn:hover {
+  background: #f0f0f0;
+}
+
+.left-menu__btn--primary {
+  background: #2196F3;
+  color: #fff;
+  border-color: #2196F3;
+}
+
+.left-menu__btn--primary:hover {
+  background: #1976D2;
+}
