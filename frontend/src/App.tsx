@@ -2,13 +2,26 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getBoards, createBoard, getBoard } from './api/boards';
 import { BoardModeContext } from './hooks/useBoardMode';
+import { ThemeContext, type Theme } from './hooks/useTheme';
 import Canvas from './components/Canvas/Canvas';
 import type { BoardMode } from './types';
 
 export default function App() {
   const [boardId, setBoardId] = useState<string | null>(null);
   const [boardMode, setBoardMode] = useState<BoardMode>('edit');
+  const [theme, setThemeState] = useState<Theme>(() => {
+    return (localStorage.getItem('theme') as Theme) || 'light';
+  });
   const queryClient = useQueryClient();
+
+  function setTheme(t: Theme) {
+    setThemeState(t);
+    localStorage.setItem('theme', t);
+  }
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   const { data: boards } = useQuery({
     queryKey: ['boards'],
@@ -41,12 +54,14 @@ export default function App() {
   }
 
   return (
-    <BoardModeContext.Provider value={{ mode: boardMode, setMode: setBoardMode }}>
-      <Canvas
-        boardId={boardId}
-        cards={boardData.cards}
-        connections={boardData.connections}
-      />
-    </BoardModeContext.Provider>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      <BoardModeContext.Provider value={{ mode: boardMode, setMode: setBoardMode }}>
+        <Canvas
+          boardId={boardId}
+          cards={boardData.cards}
+          connections={boardData.connections}
+        />
+      </BoardModeContext.Provider>
+    </ThemeContext.Provider>
   );
 }

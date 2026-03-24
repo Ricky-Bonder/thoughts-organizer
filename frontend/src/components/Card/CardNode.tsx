@@ -16,6 +16,7 @@ function CardNodeComponent({ data, selected }: NodeProps) {
   const { card, onDelete, onEdit, onResize } = data as unknown as CardNodeData;
   const { mode } = useBoardMode();
   const isEdit = mode === 'edit';
+  const isEmpty = !card.content && card.attachments.length === 0;
 
   return (
     <>
@@ -24,12 +25,14 @@ function CardNodeComponent({ data, selected }: NodeProps) {
           isVisible={selected}
           minWidth={160}
           minHeight={100}
+          lineStyle={{ borderColor: 'rgba(33, 150, 243, 0.4)' }}
+          handleStyle={{ backgroundColor: '#2196F3', width: 8, height: 8, borderRadius: 4 }}
           onResizeEnd={(_event, params) => {
             onResize(card.id, params.width, params.height);
           }}
         />
       )}
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={Position.Top} style={{ background: '#888', width: 8, height: 8 }} />
       <div
         className="card-node"
         style={{
@@ -51,13 +54,20 @@ function CardNodeComponent({ data, selected }: NodeProps) {
                 e.stopPropagation();
                 onDelete(card.id);
               }}
+              title="Delete card"
             >
               x
             </button>
           )}
         </div>
         <div className="card-node__body">
-          <ReactMarkdown>{card.content.slice(0, 200)}</ReactMarkdown>
+          {isEmpty ? (
+            <span className="card-node__empty">
+              {isEdit ? 'Double-click to edit...' : 'Empty card'}
+            </span>
+          ) : (
+            <ReactMarkdown>{card.content.slice(0, 200)}</ReactMarkdown>
+          )}
         </div>
         {card.attachments.length > 0 && (
           <div className="card-node__attachment-preview">
@@ -70,7 +80,7 @@ function CardNodeComponent({ data, selected }: NodeProps) {
           </div>
         )}
       </div>
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={Position.Bottom} style={{ background: '#888', width: 8, height: 8 }} />
     </>
   );
 }

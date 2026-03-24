@@ -12,11 +12,13 @@ import {
   type Node,
   type NodeTypes,
   type OnNodeDrag,
+  type OnSelectionChangeFunc,
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import CardNodeComponent from '../Card/CardNode';
+import TextLabelNodeComponent from '../Card/TextLabelNode';
 import CardEditor from '../Card/CardEditor';
 import ModeToggle from './ModeToggle';
 import LayoutToggle from './LayoutToggle';
@@ -26,10 +28,13 @@ import { useCreateCard, useUpdateCard, useDeleteCard, useBatchUpdatePositions, u
 import { useCreateConnection, useDeleteConnection } from '../../hooks/useConnections';
 import { uploadFile } from '../../api/uploads';
 import { getLayoutedElements } from '../../utils/layout';
+import { useTheme } from '../../hooks/useTheme';
+import { useUndoRedo } from '../../hooks/useUndoRedo';
 import type { CardData, ArrowSettings, CardTemplate } from '../../types';
 
 const nodeTypes: NodeTypes = {
   card: CardNodeComponent,
+  text_label: TextLabelNodeComponent,
 };
 
 interface CanvasProps {
@@ -48,10 +53,12 @@ interface CanvasProps {
 
 export default function Canvas({ boardId, cards, connections }: CanvasProps) {
   const { mode } = useBoardMode();
+  const { theme } = useTheme();
   const isEdit = mode === 'edit';
 
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
   const [isAutoLayout, setIsAutoLayout] = useState(false);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 
   const [arrowSettings, setArrowSettings] = useState<ArrowSettings>({
     direction: 'forward',
@@ -59,7 +66,7 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
   });
 
   const [cardTemplate, setCardTemplate] = useState<CardTemplate>({
-    color: '#FFEB3B',
+    color: '#FFF9C4',
     font_size: 14,
   });
 
@@ -71,20 +78,55 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
   const createConnection = useCreateConnection(boardId);
   const deleteConnection = useDeleteConnection(boardId);
 
+  const { pushAction, undo, redo, canUndo, canRedo, setCallbacks } = useUndoRedo();
+
   // Use refs for callbacks passed into node data to avoid infinite re-render loops
   const deleteCardRef = useRef(deleteCard);
   deleteCardRef.current = deleteCard;
   const updateCardRef = useRef(updateCard);
   updateCardRef.current = updateCard;
+  const createCardRef = useRef(createCard);
+  createCardRef.current = createCard;
+
+  // Keep undo/redo callbacks in sync
+  const cardsRef = useRef(cards);
+  cardsRef.current = cards;
+
+  useEffect(() => {
+    setCallbacks({
+      updateCard: (cardId, updates) => {
+        updateCardRef.current.mutate({ cardId, updates: updates as Partial<CardData> });
+      },
+      createCard: async (data) => {
+        return await createCardRef.current.mutateAsync(data as Partial<CardData>);
+      },
+      deleteCard: (cardId) => {
+        deleteCardRef.current.mutate(cardId);
+      },
+    });
+  }, [setCallbacks]);
+
+  const dragStartPos = useRef<{ [id: string]: { x: number; y: number } }>({});
+
+  const pushActionRef = useRef(pushAction);
+  pushActionRef.current = pushAction;
 
   const handleDeleteCard = useCallback((cardId: string) => {
     if (confirm('Delete this card?')) {
+      const card = cardsRef.current.find((c) => c.id === cardId);
+      if (card) {
+        pushActionRef.current({ type: 'delete', card });
+      }
       deleteCardRef.current.mutate(cardId);
     }
   }, []);
 
   const handleEditCard = useCallback((card: CardData) => {
-    setEditingCard(card);
+    if (card.card_type === 'text_label') {
+      updateCardRef.current.mutate({ cardId: card.id, updates: { content: card.content } as Partial<CardData> });
+    } else {
+      setEditingCard(card);
+    }
   }, []);
 
   const handleResizeCard = useCallback((cardId: string, width: number, height: number) => {
@@ -100,7 +142,7 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
     () =>
       cards.map((card) => ({
         id: card.id,
-        type: 'card' as const,
+        type: card.card_type === 'text_label' ? 'text_label' : 'card',
         position: card.position,
         data: {
           card,
@@ -109,7 +151,6 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
           onResize: handleResizeCard,
         },
         style: { width: card.size.width, height: card.size.height },
-        dragHandle: '.card-node__header',
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cardsKey]
@@ -175,7 +216,21 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
   const deleteConnectionRef = useRef(deleteConnection);
   deleteConnectionRef.current = deleteConnection;
 
+  const onNodeDragStart: OnNodeDrag = useCallback((_event, node) => {
+    dragStartPos.current[node.id] = { ...node.position };
+  }, []);
+
   const onNodeDragStop: OnNodeDrag = useCallback((_event, node) => {
+    const oldPos = dragStartPos.current[node.id];
+    if (oldPos) {
+      pushActionRef.current({
+        type: 'move',
+        cardId: node.id,
+        oldPosition: oldPos,
+        newPosition: { ...node.position },
+      });
+      delete dragStartPos.current[node.id];
+    }
     updateCardRef.current.mutate({
       cardId: node.id,
       updates: { position: node.position } as Partial<CardData>,
@@ -192,6 +247,23 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
       style: arrowSettingsRef.current.style,
     });
   }, []);
+
+  const onSelectionChange: OnSelectionChangeFunc = useCallback(({ nodes: selectedNodes }) => {
+    setSelectedNodeIds(selectedNodes.map((n) => n.id));
+  }, []);
+
+  const handleColorChange = useCallback((color: string) => {
+    selectedNodeIds.forEach((nodeId) => {
+      const card = cardsRef.current.find((c) => c.id === nodeId);
+      if (card) {
+        pushAction({ type: 'color', cardId: nodeId, oldColor: card.color, newColor: color });
+      }
+      updateCardRef.current.mutate({
+        cardId: nodeId,
+        updates: { color } as Partial<CardData>,
+      });
+    });
+  }, [selectedNodeIds, pushAction]);
 
   const onEdgesDelete = useCallback((deletedEdges: Edge[]) => {
     deletedEdges.forEach((edge) => {
@@ -222,15 +294,18 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
   }, [setNodes, setEdges, batchUpdatePositions]);
 
   const handleCreateCard = useCallback(() => {
-    createCard.mutate({
+    createCard.mutateAsync({
       title: '',
       content: '',
       color: cardTemplate.color,
       font_size: cardTemplate.font_size,
       position: { x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 },
       size: { width: 200, height: 150 },
-    } as Partial<CardData>);
-  }, [createCard, cardTemplate]);
+      card_type: 'card',
+    } as Partial<CardData>).then((newCard) => {
+      pushAction({ type: 'create', card: newCard });
+    });
+  }, [createCard, cardTemplate, pushAction]);
 
   const handleUpload = useCallback(
     async (files: FileList) => {
@@ -270,8 +345,26 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
     event.dataTransfer.dropEffect = 'copy';
   }, []);
 
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (!isEdit) return;
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && ((e.key === 'z' && e.shiftKey) || e.key === 'y')) {
+        e.preventDefault();
+        redo();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEdit, undo, redo]);
+
   return (
     <div
+      className={!isEdit ? 'view-mode' : ''}
       style={{ width: '100%', height: '100%' }}
       onDrop={handleCanvasDrop}
       onDragOver={handleCanvasDragOver}
@@ -283,30 +376,98 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
         onCardTemplateChange={setCardTemplate}
         onCreateCard={handleCreateCard}
         onUpload={handleUpload}
+        onColorChange={selectedNodeIds.length > 0 ? handleColorChange : undefined}
       />
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        style={{ background: theme === 'dark' ? '#1a1a2e' : '#fafafa' }}
         onNodesChange={isEdit ? onNodesChange : undefined}
         onEdgesChange={isEdit ? onEdgesChange : undefined}
         onConnect={isEdit ? onConnect : undefined}
+        onNodeDragStart={isEdit ? onNodeDragStart : undefined}
         onNodeDragStop={isEdit ? onNodeDragStop : undefined}
         onEdgesDelete={isEdit ? onEdgesDelete : undefined}
+        onSelectionChange={onSelectionChange}
         nodesDraggable={isEdit}
         nodesConnectable={isEdit}
         elementsSelectable={isEdit}
         fitView
         deleteKeyCode={isEdit ? 'Delete' : null}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#ddd" />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={theme === 'dark' ? '#333' : '#ddd'} />
         <Controls />
         <Panel position="top-right">
           <div style={{ display: 'flex', gap: 8 }}>
+            {isEdit && (
+              <>
+                <button
+                  className="panel-btn"
+                  onClick={undo}
+                  disabled={!canUndo}
+                  title="Undo (Ctrl+Z)"
+                  style={{ opacity: canUndo ? 1 : 0.4 }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10" />
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                  </svg>
+                </button>
+                <button
+                  className="panel-btn"
+                  onClick={redo}
+                  disabled={!canRedo}
+                  title="Redo (Ctrl+Shift+Z)"
+                  style={{ opacity: canRedo ? 1 : 0.4 }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" />
+                  </svg>
+                </button>
+              </>
+            )}
             <LayoutToggle isAutoLayout={isAutoLayout} onToggle={handleToggleAutoLayout} />
             <ModeToggle />
           </div>
         </Panel>
+        {nodes.length === 0 && isEdit && (
+          <Panel position="top-center">
+            <div style={{
+              marginTop: '30vh',
+              textAlign: 'center',
+              color: 'var(--text-muted)',
+              animation: 'fadeIn 0.5s ease',
+            }}>
+              <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.5 }}>
+                {'\uD83D\uDCA1'}
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: 'var(--text-secondary)' }}>
+                Start organizing your thoughts
+              </div>
+              <div style={{ fontSize: 14, marginBottom: 16 }}>
+                Open the menu to create your first card, or drag an image onto the canvas
+              </div>
+              <button
+                onClick={handleCreateCard}
+                style={{
+                  padding: '10px 24px',
+                  background: '#2196F3',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)',
+                }}
+              >
+                + Create First Card
+              </button>
+            </div>
+          </Panel>
+        )}
       </ReactFlow>
 
       {editingCard && (

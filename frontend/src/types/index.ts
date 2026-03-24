@@ -16,6 +16,8 @@ export interface Attachment {
   created_at: string;
 }
 
+export type CardType = 'card' | 'text_label';
+
 export interface CardData {
   id: string;
   board_id: string;
@@ -25,6 +27,7 @@ export interface CardData {
   font_size: number;
   position: Position;
   size: Size;
+  card_type: CardType;
   attachments: Attachment[];
   created_at: string;
   updated_at: string;

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from pydantic import BaseModel
 
 
@@ -23,10 +24,11 @@ class Attachment(BaseModel):
 class CardCreate(BaseModel):
     title: str = ""
     content: str = ""
-    color: str = "#FFEB3B"
+    color: str = "#FFF9C4"
     font_size: int = 14
     position: Position = Position()
     size: Size = Size()
+    card_type: Literal["card", "text_label"] = "card"
 
 
 class CardUpdate(BaseModel):
@@ -36,6 +38,7 @@ class CardUpdate(BaseModel):
     font_size: int | None = None
     position: Position | None = None
     size: Size | None = None
+    card_type: Literal["card", "text_label"] | None = None
 
 
 class CardResponse(BaseModel):
@@ -47,6 +50,7 @@ class CardResponse(BaseModel):
     font_size: int
     position: Position
     size: Size
+    card_type: Literal["card", "text_label"] = "card"
     attachments: list[Attachment] = []
     created_at: datetime
     updated_at: datetime

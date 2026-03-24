@@ -32,7 +32,7 @@ export default function ArrowPicker({ settings, onChange }: ArrowPickerProps) {
       <h4>Arrow Style</h4>
 
       <div style={{ marginBottom: 10 }}>
-        <span style={{ fontSize: 12, color: '#666' }}>Direction</span>
+        <span className="left-menu__label">Direction</span>
         <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
           {([
             { dir: 'forward' as const, label: '\u2192' },
@@ -52,7 +52,7 @@ export default function ArrowPicker({ settings, onChange }: ArrowPickerProps) {
       </div>
 
       <div style={{ marginBottom: 10 }}>
-        <span style={{ fontSize: 12, color: '#666' }}>Color</span>
+        <span className="left-menu__label">Color</span>
         <div className="left-menu__color-grid" style={{ marginTop: 4 }}>
           {ARROW_COLORS.map((c) => (
             <button
@@ -64,7 +64,7 @@ export default function ArrowPicker({ settings, onChange }: ArrowPickerProps) {
           ))}
           <button
             onClick={() => setShowCustomColor(!showCustomColor)}
-            style={{ fontSize: 11, padding: '4px 6px', borderRadius: 4, border: '1px solid #ccc', cursor: 'pointer', background: '#fff' }}
+            className="left-menu__plus-btn"
           >
             +
           </button>
@@ -77,7 +77,7 @@ export default function ArrowPicker({ settings, onChange }: ArrowPickerProps) {
       </div>
 
       <div style={{ marginBottom: 10 }}>
-        <span style={{ fontSize: 12, color: '#666' }}>Line</span>
+        <span className="left-menu__label">Line</span>
         <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
           {LINE_TYPES.map((lt) => (
             <button
@@ -93,7 +93,7 @@ export default function ArrowPicker({ settings, onChange }: ArrowPickerProps) {
       </div>
 
       <div>
-        <span style={{ fontSize: 12, color: '#666' }}>Width</span>
+        <span className="left-menu__label">Width</span>
         <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
           {STROKE_WIDTHS.map(({ label, value }) => (
             <button

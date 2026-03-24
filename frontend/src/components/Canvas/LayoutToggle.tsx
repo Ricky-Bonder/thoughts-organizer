@@ -7,18 +7,27 @@ export default function LayoutToggle({ isAutoLayout, onToggle }: LayoutTogglePro
   return (
     <button
       onClick={onToggle}
-      style={{
-        padding: '6px 14px',
-        borderRadius: 6,
-        border: '1px solid #ddd',
-        background: isAutoLayout ? '#e8f5e9' : '#fff',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: 13,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-      }}
+      className={`panel-btn ${isAutoLayout ? 'panel-btn--active-green' : ''}`}
     >
-      {isAutoLayout ? 'Auto Layout' : 'Free Placement'}
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {isAutoLayout ? (
+          <>
+            <circle cx="12" cy="5" r="3" />
+            <circle cx="6" cy="19" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="12" y1="8" x2="6" y2="16" />
+            <line x1="12" y1="8" x2="18" y2="16" />
+          </>
+        ) : (
+          <>
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </>
+        )}
+      </svg>
+      {isAutoLayout ? 'Auto' : 'Free'}
     </button>
   );
 }

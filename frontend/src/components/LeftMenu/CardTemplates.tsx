@@ -3,15 +3,10 @@ import { useState } from 'react';
 import type { CardTemplate } from '../../types';
 import './LeftMenu.css';
 
-const PRESET_TEMPLATES: CardTemplate[] = [
-  { color: '#FFEB3B', font_size: 14 },
-  { color: '#FF9800', font_size: 14 },
-  { color: '#F44336', font_size: 14 },
-  { color: '#2196F3', font_size: 14 },
-  { color: '#4CAF50', font_size: 14 },
-  { color: '#9C27B0', font_size: 14 },
-  { color: '#E91E63', font_size: 16 },
-  { color: '#FFFFFF', font_size: 14 },
+const PRESET_COLORS = [
+  '#FFF9C4', '#FFE0B2', '#FFCDD2', '#F8BBD0',
+  '#BBDEFB', '#C8E6C9', '#E1BEE7', '#FFFFFF',
+  'transparent',
 ];
 
 const FONT_SIZES = [12, 14, 16, 18, 20, 24];
@@ -20,46 +15,56 @@ interface CardTemplatesProps {
   template: CardTemplate;
   onChange: (template: CardTemplate) => void;
   onCreateCard: () => void;
+  onColorChange?: (color: string) => void;
 }
 
-export default function CardTemplates({ template, onChange, onCreateCard }: CardTemplatesProps) {
+export default function CardTemplates({ template, onChange, onCreateCard, onColorChange }: CardTemplatesProps) {
   const [showCustomColor, setShowCustomColor] = useState(false);
+
+  function handleColorClick(color: string) {
+    onChange({ ...template, color });
+    onColorChange?.(color);
+  }
 
   return (
     <div className="left-menu__section">
       <h4>Card Style</h4>
 
       <div style={{ marginBottom: 10 }}>
-        <span style={{ fontSize: 12, color: '#666' }}>Color</span>
+        <span className="left-menu__label">Color</span>
         <div className="left-menu__color-grid" style={{ marginTop: 4 }}>
-          {PRESET_TEMPLATES.map((t, i) => (
+          {PRESET_COLORS.map((c) => (
             <button
-              key={i}
-              className={`left-menu__color-swatch ${template.color === t.color ? 'left-menu__color-swatch--selected' : ''}`}
-              style={{ backgroundColor: t.color }}
-              onClick={() => onChange({ ...template, color: t.color })}
+              key={c}
+              className={`left-menu__color-swatch ${template.color === c ? 'left-menu__color-swatch--selected' : ''} ${c === 'transparent' ? 'left-menu__color-swatch--transparent' : ''}`}
+              style={{ backgroundColor: c === 'transparent' ? undefined : c }}
+              onClick={() => handleColorClick(c)}
+              title={c === 'transparent' ? 'Transparent' : c}
             />
           ))}
           <button
             onClick={() => setShowCustomColor(!showCustomColor)}
-            style={{ fontSize: 11, padding: '4px 6px', borderRadius: 4, border: '1px solid #ccc', cursor: 'pointer', background: '#fff' }}
+            className="left-menu__plus-btn"
           >
             +
           </button>
         </div>
         {showCustomColor && (
           <div style={{ marginTop: 8 }}>
-            <HexColorPicker color={template.color} onChange={(c) => onChange({ ...template, color: c })} />
+            <HexColorPicker
+              color={template.color === 'transparent' ? '#ffffff' : template.color}
+              onChange={(c) => handleColorClick(c)}
+            />
           </div>
         )}
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <span style={{ fontSize: 12, color: '#666' }}>Font Size</span>
+        <span className="left-menu__label" style={{ display: 'inline' }}>Font Size</span>
         <select
           value={template.font_size}
           onChange={(e) => onChange({ ...template, font_size: Number(e.target.value) })}
-          style={{ marginLeft: 8, padding: '4px 8px', borderRadius: 4, border: '1px solid #ccc' }}
+          className="left-menu__select"
         >
           {FONT_SIZES.map((s) => (
             <option key={s} value={s}>{s}px</option>

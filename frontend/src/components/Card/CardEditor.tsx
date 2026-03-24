@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { HexColorPicker } from 'react-colorful';
 import type { CardData } from '../../types';
+import '../LeftMenu/LeftMenu.css';
+import './CardEditor.css';
 
 const PRESET_COLORS = [
-  '#FFEB3B', '#FF9800', '#F44336', '#E91E63',
-  '#9C27B0', '#3F51B5', '#2196F3', '#4CAF50',
-  '#8BC34A', '#FFFFFF',
+  '#FFF9C4', '#FFE0B2', '#FFCDD2', '#F8BBD0',
+  '#E1BEE7', '#C5CAE9', '#BBDEFB', '#C8E6C9',
+  '#FFFFFF', 'transparent',
 ];
 
 const FONT_SIZES = [12, 14, 16, 18, 20, 24];
@@ -29,49 +31,56 @@ export default function CardEditor({ card, onSave, onDelete, onClose }: CardEdit
     onClose();
   }
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Escape') onClose();
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSave();
+  }
+
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Edit Card</h3>
-          <button onClick={onClose} style={closeBtnStyle}>x</button>
+    <div className="overlay-enter editor-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
+      <div className="modal-enter editor-modal" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em' }}>Edit Card</h3>
+          <button onClick={onClose} className="editor-close-btn" title="Close (Esc)">x</button>
         </div>
 
-        <label style={labelStyle}>Title</label>
+        <label className="editor-label">Title</label>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          style={inputStyle}
+          className="editor-input"
           placeholder="Card title..."
+          autoFocus
         />
 
-        <label style={labelStyle}>Content (Markdown)</label>
+        <label className="editor-label">Content (Markdown)</label>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          style={{ ...inputStyle, minHeight: 120, resize: 'vertical', fontFamily: 'inherit' }}
+          className="editor-input editor-textarea"
           placeholder="Write your thoughts..."
         />
 
-        <label style={labelStyle}>Color</label>
+        <label className="editor-label">Color</label>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
           {PRESET_COLORS.map((c) => (
             <button
               key={c}
               onClick={() => setColor(c)}
+              className={`left-menu__color-swatch ${color === c ? 'left-menu__color-swatch--selected' : ''} ${c === 'transparent' ? 'left-menu__color-swatch--transparent' : ''}`}
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: 4,
-                border: color === c ? '2px solid #333' : '1px solid #ccc',
-                backgroundColor: c,
-                cursor: 'pointer',
+                width: 30,
+                height: 30,
+                borderRadius: 6,
+                backgroundColor: c === 'transparent' ? undefined : c,
               }}
+              title={c === 'transparent' ? 'Transparent' : c}
             />
           ))}
           <button
             onClick={() => setShowColorPicker(!showColorPicker)}
-            style={{ padding: '4px 8px', cursor: 'pointer', borderRadius: 4, border: '1px solid #ccc', background: '#fff', fontSize: 12 }}
+            className="left-menu__plus-btn"
+            style={{ padding: '4px 10px', fontSize: 12, fontWeight: 500, borderRadius: 6 }}
           >
             Custom
           </button>
@@ -82,88 +91,49 @@ export default function CardEditor({ card, onSave, onDelete, onClose }: CardEdit
           </div>
         )}
 
-        <label style={labelStyle}>Font Size</label>
-        <select
-          value={fontSize}
-          onChange={(e) => setFontSize(Number(e.target.value))}
-          style={{ ...inputStyle, width: 'auto' }}
-        >
-          {FONT_SIZES.map((s) => (
-            <option key={s} value={s}>{s}px</option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 4 }}>
+          <div>
+            <label className="editor-label">Font Size</label>
+            <select
+              value={fontSize}
+              onChange={(e) => setFontSize(Number(e.target.value))}
+              className="editor-input"
+              style={{ width: 'auto', padding: '6px 10px' }}
+            >
+              {FONT_SIZES.map((s) => (
+                <option key={s} value={s}>{s}px</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, marginTop: 24 }}>
+            <div
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 4,
+                backgroundColor: color,
+                boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.1)',
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Preview</span>
+          </div>
+        </div>
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          <button onClick={handleSave} style={saveBtnStyle}>Save</button>
-          <button onClick={onDelete} style={deleteBtnStyle}>Delete Card</button>
+        <div className="editor-actions">
+          <button onClick={handleSave} className="editor-save-btn" title="Ctrl+Enter to save">
+            Save
+          </button>
+          <button
+            onClick={() => { if (confirm('Delete this card permanently?')) onDelete(); }}
+            className="editor-delete-btn"
+          >
+            Delete
+          </button>
+          <div style={{ flex: 1 }} />
+          <button onClick={onClose} className="editor-cancel-btn">Cancel</button>
         </div>
       </div>
     </div>
   );
 }
-
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.4)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-};
-
-const modalStyle: React.CSSProperties = {
-  background: '#fff',
-  borderRadius: 8,
-  padding: 24,
-  width: 420,
-  maxHeight: '80vh',
-  overflow: 'auto',
-  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-};
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 13,
-  fontWeight: 600,
-  marginBottom: 4,
-  marginTop: 12,
-  color: '#555',
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  border: '1px solid #ddd',
-  borderRadius: 4,
-  fontSize: 14,
-  outline: 'none',
-};
-
-const closeBtnStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  fontSize: 18,
-  cursor: 'pointer',
-  padding: '0 4px',
-};
-
-const saveBtnStyle: React.CSSProperties = {
-  padding: '8px 20px',
-  background: '#2196F3',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 4,
-  cursor: 'pointer',
-  fontWeight: 600,
-};
-
-const deleteBtnStyle: React.CSSProperties = {
-  padding: '8px 20px',
-  background: '#F44336',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 4,
-  cursor: 'pointer',
-  fontWeight: 600,
-};
