@@ -2,7 +2,7 @@
 
 A visual canvas for organizing thoughts as post-it style cards with customizable connections. Built with React Flow and FastAPI.
 
-![Dark mode with connections](docs/dark-mode.png)
+![Thoughts Organizer](docs/hero.png)
 
 ## Features
 
