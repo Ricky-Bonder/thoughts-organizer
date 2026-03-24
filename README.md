@@ -43,22 +43,31 @@ A visual canvas for organizing thoughts as post-it style cards with customizable
 ### Prerequisites
 
 - **Docker** (for MongoDB)
-- **Python 3.11+**
+- **Python 3.11+** (if using Python 3.12, install `python3.12-venv` package)
 - **Node.js 18+**
 
-### 1. Start MongoDB
+### 1. Install Python venv (if needed)
+
+If using Python 3.12 on Ubuntu/Debian:
+```bash
+sudo apt install python3.12-venv
+```
+
+### 2. Start MongoDB
 
 ```bash
 docker compose up -d
+# If using older docker-compose: docker-compose up -d
+# May require sudo: sudo docker-compose up -d
 ```
 
 This starts MongoDB on port 27017 with a persistent volume.
 
-### 2. Start the Backend
+### 3. Start the Backend
 
 ```bash
 cd backend
-python -m venv .venv
+python3.12 -m venv .venv  # or python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -66,7 +75,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 The API will be available at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
 
-### 3. Start the Frontend
+### 4. Start the Frontend
 
 ```bash
 cd frontend
