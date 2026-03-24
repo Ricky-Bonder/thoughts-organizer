@@ -24,6 +24,7 @@ export interface CardData {
   title: string;
   content: string;
   color: string;
+  text_color: string;
   font_size: number;
   position: Position;
   size: Size;
@@ -73,5 +74,6 @@ export interface ArrowSettings {
 
 export interface CardTemplate {
   color: string;
+  text_color: string;
   font_size: number;
 }

@@ -9,6 +9,11 @@ const PRESET_COLORS = [
   'transparent',
 ];
 
+const TEXT_COLORS = [
+  { label: 'Black', value: '#000000' },
+  { label: 'White', value: '#FFFFFF' },
+];
+
 const FONT_SIZES = [12, 14, 16, 18, 20, 24];
 
 interface CardTemplatesProps {
@@ -16,9 +21,10 @@ interface CardTemplatesProps {
   onChange: (template: CardTemplate) => void;
   onCreateCard: () => void;
   onColorChange?: (color: string) => void;
+  onTextColorChange?: (color: string) => void;
 }
 
-export default function CardTemplates({ template, onChange, onCreateCard, onColorChange }: CardTemplatesProps) {
+export default function CardTemplates({ template, onChange, onCreateCard, onColorChange, onTextColorChange }: CardTemplatesProps) {
   const [showCustomColor, setShowCustomColor] = useState(false);
 
   function handleColorClick(color: string) {
@@ -26,12 +32,17 @@ export default function CardTemplates({ template, onChange, onCreateCard, onColo
     onColorChange?.(color);
   }
 
+  function handleTextColorClick(color: string) {
+    onChange({ ...template, text_color: color });
+    onTextColorChange?.(color);
+  }
+
   return (
     <div className="left-menu__section">
       <h4>Card Style</h4>
 
       <div style={{ marginBottom: 10 }}>
-        <span className="left-menu__label">Color</span>
+        <span className="left-menu__label">Background</span>
         <div className="left-menu__color-grid" style={{ marginTop: 4 }}>
           {PRESET_COLORS.map((c) => (
             <button
@@ -57,6 +68,32 @@ export default function CardTemplates({ template, onChange, onCreateCard, onColo
             />
           </div>
         )}
+      </div>
+
+      <div style={{ marginBottom: 10 }}>
+        <span className="left-menu__label">Text Color</span>
+        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+          {TEXT_COLORS.map(({ label, value }) => (
+            <button
+              key={value}
+              className={`left-menu__arrow-option ${template.text_color === value ? 'left-menu__arrow-option--selected' : ''}`}
+              onClick={() => handleTextColorClick(value)}
+              style={{ flex: 1, justifyContent: 'center', fontSize: 12 }}
+            >
+              <span style={{
+                display: 'inline-block',
+                width: 14,
+                height: 14,
+                borderRadius: 3,
+                backgroundColor: value,
+                border: '1px solid rgba(128,128,128,0.4)',
+                verticalAlign: 'middle',
+                marginRight: 4,
+              }} />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div style={{ marginBottom: 12 }}>

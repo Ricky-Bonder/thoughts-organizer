@@ -10,12 +10,14 @@ interface MoveAction {
 
 interface CreateAction {
   type: 'create';
-  card: CardData;
+  cardId: string;
+  cardData: Partial<CardData>;
 }
 
 interface DeleteAction {
   type: 'delete';
-  card: CardData;
+  cardId: string;
+  cardData: Partial<CardData>;
 }
 
 interface ColorAction {
@@ -34,95 +36,97 @@ interface UndoRedoCallbacks {
 }
 
 export function useUndoRedo() {
-  const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
-  const [redoStack, setRedoStack] = useState<UndoAction[]>([]);
+  const undoStackRef = useRef<UndoAction[]>([]);
+  const redoStackRef = useRef<UndoAction[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const callbacksRef = useRef<UndoRedoCallbacks | null>(null);
+  // Maps old card IDs to new card IDs after re-creation
+  const idMapRef = useRef<Record<string, string>>({});
 
   const setCallbacks = useCallback((cbs: UndoRedoCallbacks) => {
     callbacksRef.current = cbs;
   }, []);
 
+  function resolveId(id: string): string {
+    return idMapRef.current[id] || id;
+  }
+
+  function syncFlags() {
+    setCanUndo(undoStackRef.current.length > 0);
+    setCanRedo(redoStackRef.current.length > 0);
+  }
+
   const pushAction = useCallback((action: UndoAction) => {
-    setUndoStack((prev) => [...prev, action]);
-    setRedoStack([]);
+    undoStackRef.current = [...undoStackRef.current, action];
+    redoStackRef.current = [];
+    syncFlags();
   }, []);
 
   const undo = useCallback(() => {
-    setUndoStack((prev) => {
-      if (prev.length === 0) return prev;
-      const action = prev[prev.length - 1];
-      const cbs = callbacksRef.current;
-      if (!cbs) return prev;
+    const stack = undoStackRef.current;
+    if (stack.length === 0) return;
+    const cbs = callbacksRef.current;
+    if (!cbs) return;
 
-      switch (action.type) {
-        case 'move':
-          cbs.updateCard(action.cardId, { position: action.oldPosition });
-          break;
-        case 'create':
-          cbs.deleteCard(action.card.id);
-          break;
-        case 'delete':
-          cbs.createCard({
-            title: action.card.title,
-            content: action.card.content,
-            color: action.card.color,
-            font_size: action.card.font_size,
-            position: action.card.position,
-            size: action.card.size,
-            card_type: action.card.card_type,
-          });
-          break;
-        case 'color':
-          cbs.updateCard(action.cardId, { color: action.oldColor });
-          break;
-      }
+    const action = stack[stack.length - 1];
+    undoStackRef.current = stack.slice(0, -1);
+    redoStackRef.current = [...redoStackRef.current, action];
+    syncFlags();
 
-      setRedoStack((r) => [...r, action]);
-      return prev.slice(0, -1);
-    });
+    switch (action.type) {
+      case 'move':
+        cbs.updateCard(resolveId(action.cardId), { position: action.oldPosition });
+        break;
+      case 'create':
+        cbs.deleteCard(resolveId(action.cardId));
+        break;
+      case 'delete':
+        cbs.createCard(action.cardData).then((newCard) => {
+          idMapRef.current[action.cardId] = newCard.id;
+        });
+        break;
+      case 'color':
+        cbs.updateCard(resolveId(action.cardId), { color: action.oldColor });
+        break;
+    }
   }, []);
 
   const redo = useCallback(() => {
-    setRedoStack((prev) => {
-      if (prev.length === 0) return prev;
-      const action = prev[prev.length - 1];
-      const cbs = callbacksRef.current;
-      if (!cbs) return prev;
+    const stack = redoStackRef.current;
+    if (stack.length === 0) return;
+    const cbs = callbacksRef.current;
+    if (!cbs) return;
 
-      switch (action.type) {
-        case 'move':
-          cbs.updateCard(action.cardId, { position: action.newPosition });
-          break;
-        case 'create':
-          cbs.createCard({
-            title: action.card.title,
-            content: action.card.content,
-            color: action.card.color,
-            font_size: action.card.font_size,
-            position: action.card.position,
-            size: action.card.size,
-            card_type: action.card.card_type,
-          });
-          break;
-        case 'delete':
-          cbs.deleteCard(action.card.id);
-          break;
-        case 'color':
-          cbs.updateCard(action.cardId, { color: action.newColor });
-          break;
-      }
+    const action = stack[stack.length - 1];
+    redoStackRef.current = stack.slice(0, -1);
+    undoStackRef.current = [...undoStackRef.current, action];
+    syncFlags();
 
-      setUndoStack((u) => [...u, action]);
-      return prev.slice(0, -1);
-    });
+    switch (action.type) {
+      case 'move':
+        cbs.updateCard(resolveId(action.cardId), { position: action.newPosition });
+        break;
+      case 'create':
+        cbs.createCard(action.cardData).then((newCard) => {
+          idMapRef.current[action.cardId] = newCard.id;
+        });
+        break;
+      case 'delete':
+        cbs.deleteCard(resolveId(action.cardId));
+        break;
+      case 'color':
+        cbs.updateCard(resolveId(action.cardId), { color: action.newColor });
+        break;
+    }
   }, []);
 
   return {
     pushAction,
     undo,
     redo,
-    canUndo: undoStack.length > 0,
-    canRedo: redoStack.length > 0,
+    canUndo,
+    canRedo,
     setCallbacks,
   };
 }

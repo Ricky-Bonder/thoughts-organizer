@@ -25,6 +25,7 @@ class CardCreate(BaseModel):
     title: str = ""
     content: str = ""
     color: str = "#FFF9C4"
+    text_color: str = "#000000"
     font_size: int = 14
     position: Position = Position()
     size: Size = Size()
@@ -35,6 +36,7 @@ class CardUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
     color: str | None = None
+    text_color: str | None = None
     font_size: int | None = None
     position: Position | None = None
     size: Size | None = None
@@ -47,6 +49,7 @@ class CardResponse(BaseModel):
     title: str
     content: str
     color: str
+    text_color: str = "#000000"
     font_size: int
     position: Position
     size: Size

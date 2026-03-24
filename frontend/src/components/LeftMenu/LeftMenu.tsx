@@ -15,6 +15,7 @@ interface LeftMenuProps {
   onCreateCard: () => void;
   onUpload: (files: FileList) => void;
   onColorChange?: (color: string) => void;
+  onTextColorChange?: (color: string) => void;
 }
 
 export default function LeftMenu({
@@ -25,6 +26,7 @@ export default function LeftMenu({
   onCreateCard,
   onUpload,
   onColorChange,
+  onTextColorChange,
 }: LeftMenuProps) {
   const [collapsed, setCollapsed] = useState(true);
   const { mode } = useBoardMode();
@@ -52,6 +54,7 @@ export default function LeftMenu({
           onChange={onCardTemplateChange}
           onCreateCard={onCreateCard}
           onColorChange={onColorChange}
+          onTextColorChange={onTextColorChange}
         />
         <ArrowPicker
           settings={arrowSettings}

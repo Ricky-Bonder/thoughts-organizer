@@ -17,6 +17,8 @@ function CardNodeComponent({ data, selected }: NodeProps) {
   const { mode } = useBoardMode();
   const isEdit = mode === 'edit';
   const isEmpty = !card.content && card.attachments.length === 0;
+  const isTransparent = card.color === 'transparent';
+  const textColor = card.text_color || '#000000';
 
   return (
     <>
@@ -34,33 +36,36 @@ function CardNodeComponent({ data, selected }: NodeProps) {
       )}
       <Handle type="target" position={Position.Top} style={{ background: '#888', width: 8, height: 8 }} />
       <div
-        className="card-node"
+        className={`card-node ${isTransparent ? 'card-node--transparent' : ''}`}
         style={{
-          backgroundColor: card.color,
+          backgroundColor: isTransparent ? 'transparent' : card.color,
           width: '100%',
           height: '100%',
           fontSize: card.font_size,
+          color: textColor,
         }}
         onDoubleClick={() => isEdit && onEdit(card)}
       >
-        <div className="card-node__header">
-          <span className="card-node__title">
-            {card.title || 'Untitled'}
-          </span>
-          {isEdit && (
-            <button
-              className="card-node__delete"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(card.id);
-              }}
-              title="Delete card"
-            >
-              x
-            </button>
-          )}
-        </div>
-        <div className="card-node__body">
+        {!isTransparent && (
+          <div className="card-node__header">
+            <span className="card-node__title">
+              {card.title || 'Untitled'}
+            </span>
+            {isEdit && (
+              <button
+                className="card-node__delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(card.id);
+                }}
+                title="Delete card"
+              >
+                x
+              </button>
+            )}
+          </div>
+        )}
+        <div className="card-node__body" style={{ color: textColor }}>
           {isEmpty ? (
             <span className="card-node__empty">
               {isEdit ? 'Double-click to edit...' : 'Empty card'}

@@ -67,6 +67,7 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
 
   const [cardTemplate, setCardTemplate] = useState<CardTemplate>({
     color: '#FFF9C4',
+    text_color: '#000000',
     font_size: 14,
   });
 
@@ -115,7 +116,20 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
     if (confirm('Delete this card?')) {
       const card = cardsRef.current.find((c) => c.id === cardId);
       if (card) {
-        pushActionRef.current({ type: 'delete', card });
+        pushActionRef.current({
+          type: 'delete',
+          cardId: card.id,
+          cardData: {
+            title: card.title,
+            content: card.content,
+            color: card.color,
+            text_color: card.text_color,
+            font_size: card.font_size,
+            position: card.position,
+            size: card.size,
+            card_type: card.card_type,
+          },
+        });
       }
       deleteCardRef.current.mutate(cardId);
     }
@@ -216,6 +230,26 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
   const deleteConnectionRef = useRef(deleteConnection);
   deleteConnectionRef.current = deleteConnection;
 
+  const isAutoLayoutRef = useRef(isAutoLayout);
+  isAutoLayoutRef.current = isAutoLayout;
+
+  const applyAutoLayout = useCallback(() => {
+    setNodes((currentNodes) => {
+      setEdges((currentEdges) => {
+        const { nodes: layoutedNodes } = getLayoutedElements(currentNodes, currentEdges);
+        batchUpdatePositions.mutate(
+          layoutedNodes.map((n) => ({ id: n.id, position: n.position }))
+        );
+        setNodes(layoutedNodes);
+        return currentEdges;
+      });
+      return currentNodes;
+    });
+  }, [setNodes, setEdges, batchUpdatePositions]);
+
+  const applyAutoLayoutRef = useRef(applyAutoLayout);
+  applyAutoLayoutRef.current = applyAutoLayout;
+
   const onNodeDragStart: OnNodeDrag = useCallback((_event, node) => {
     dragStartPos.current[node.id] = { ...node.position };
   }, []);
@@ -246,6 +280,9 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
       direction: arrowSettingsRef.current.direction,
       style: arrowSettingsRef.current.style,
     });
+    if (isAutoLayoutRef.current) {
+      setTimeout(() => applyAutoLayoutRef.current(), 100);
+    }
   }, []);
 
   const onSelectionChange: OnSelectionChangeFunc = useCallback(({ nodes: selectedNodes }) => {
@@ -265,6 +302,15 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
     });
   }, [selectedNodeIds, pushAction]);
 
+  const handleTextColorChange = useCallback((textColor: string) => {
+    selectedNodeIds.forEach((nodeId) => {
+      updateCardRef.current.mutate({
+        cardId: nodeId,
+        updates: { text_color: textColor } as Partial<CardData>,
+      });
+    });
+  }, [selectedNodeIds]);
+
   const onEdgesDelete = useCallback((deletedEdges: Edge[]) => {
     deletedEdges.forEach((edge) => {
       deleteConnectionRef.current.mutate(edge.id);
@@ -272,40 +318,39 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
   }, []);
 
   const handleToggleAutoLayout = useCallback(() => {
-    setIsAutoLayout((prev) => {
-      const next = !prev;
-      if (next) {
-        setNodes((currentNodes) => {
-          setEdges((currentEdges) => {
-            const { nodes: layoutedNodes } = getLayoutedElements(currentNodes, currentEdges);
-            batchUpdatePositions.mutate(
-              layoutedNodes.map((n) => ({ id: n.id, position: n.position }))
-            );
-            // We set nodes inside setEdges callback just to read currentEdges;
-            // return currentEdges unchanged
-            setNodes(layoutedNodes);
-            return currentEdges;
-          });
-          return currentNodes; // will be overwritten by inner setNodes
-        });
-      }
-      return next;
-    });
-  }, [setNodes, setEdges, batchUpdatePositions]);
+    setIsAutoLayout((prev) => !prev);
+  }, []);
 
   const handleCreateCard = useCallback(() => {
     createCard.mutateAsync({
       title: '',
       content: '',
       color: cardTemplate.color,
+      text_color: cardTemplate.text_color,
       font_size: cardTemplate.font_size,
       position: { x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 },
       size: { width: 200, height: 150 },
       card_type: 'card',
     } as Partial<CardData>).then((newCard) => {
-      pushAction({ type: 'create', card: newCard });
+      pushAction({
+        type: 'create',
+        cardId: newCard.id,
+        cardData: {
+          title: newCard.title,
+          content: newCard.content,
+          color: newCard.color,
+          text_color: newCard.text_color,
+          font_size: newCard.font_size,
+          position: newCard.position,
+          size: newCard.size,
+          card_type: newCard.card_type,
+        },
+      });
+      if (isAutoLayoutRef.current) {
+        setTimeout(applyAutoLayout, 100);
+      }
     });
-  }, [createCard, cardTemplate, pushAction]);
+  }, [createCard, cardTemplate, pushAction, applyAutoLayout]);
 
   const handleUpload = useCallback(
     async (files: FileList) => {
@@ -315,6 +360,7 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
           title: file.name,
           content: '',
           color: cardTemplate.color,
+          text_color: cardTemplate.text_color,
           font_size: cardTemplate.font_size,
           position: { x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 },
           size: { width: 220, height: 200 },
@@ -377,6 +423,7 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
         onCreateCard={handleCreateCard}
         onUpload={handleUpload}
         onColorChange={selectedNodeIds.length > 0 ? handleColorChange : undefined}
+        onTextColorChange={selectedNodeIds.length > 0 ? handleTextColorChange : undefined}
       />
       <ReactFlow
         nodes={nodes}
@@ -428,7 +475,9 @@ export default function Canvas({ boardId, cards, connections }: CanvasProps) {
                 </button>
               </>
             )}
-            <LayoutToggle isAutoLayout={isAutoLayout} onToggle={handleToggleAutoLayout} />
+            {isEdit && (
+              <LayoutToggle isAutoLayout={isAutoLayout} onToggle={handleToggleAutoLayout} />
+            )}
             <ModeToggle />
           </div>
         </Panel>
